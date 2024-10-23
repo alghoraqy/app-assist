@@ -18,7 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _serverStarted = false;
   HttpServer? _server;
   DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-  DeviceName  plugin = DeviceName();
+  DeviceName plugin = DeviceName();
 
   AndroidDeviceInfo? androidInfo;
   PackageInfo? packageInfo;
@@ -81,12 +81,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void startServer() async {
+    print(deviceName);
+    print(androidInfo!.device); 
     try {
       _server = await HttpServer.bind(InternetAddress.anyIPv4, 40600);
       setState(() => _serverStarted = true);
 
       await for (HttpRequest request in _server!) {
-        print('Request received from: ${request.connectionInfo?.remoteAddress}');
+        print(
+            'Request received from: ${request.connectionInfo?.remoteAddress}');
         final resonse =
             ' "{  \\"version\\": null,  \\"entity\\": {    \\"creationDateTime\\": \\"${DateTime.now().toUtc().toIso8601String()}\\",   \\"version\\": \\"${packageInfo?.version ?? '5.0.0'}\\",    \\"macAddress\\": \\"$macAddress\\",   \\"ipAddress\\": \\"$ipAddress\\", \\"machineName\\": \\"$deviceName\\",  \\"userDomainName\\": \\"NA\\",    \\"userName\\": \\"$deviceName\\",    \\"processorName\\": \\"${androidInfo!.hardware}\\",    \\"systemName\\": \\"Android  v. ${androidInfo!.version.release}\\",    \\"accountDomainSid\\": \\"${androidInfo!.id}\\",    \\"deviceId\\": \\"${androidInfo!.id}\\",    \\"uuid\\": \\"${androidInfo!.id}\\",    \\"diskDriveSerial\\": \\"${androidInfo!.id}\\",    \\"biosSerial\\": \\"${androidInfo!.id}\\",    \\"motherBoardSerialNumber\\": \\"${androidInfo!.id}\\",    \\"processorId\\": \\"${androidInfo!.id}\\",    \\"silentPrintIsEnabled\\": false  },  \\"returnStatus\\": true,  \\"returnMessage\\": null}"';
         request.response.headers.add('Access-Control-Allow-Origin', '*');
