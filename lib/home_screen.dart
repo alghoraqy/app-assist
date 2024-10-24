@@ -1,10 +1,13 @@
+import 'dart:convert';
+
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_device_name/flutter_device_name.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:mac_address_plus/mac_address_plus.dart';
+import 'package:mobile_device_identifier/mobile_device_identifier.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,34 +26,21 @@ class _HomeScreenState extends State<HomeScreen> {
   AndroidDeviceInfo? androidInfo;
   PackageInfo? packageInfo;
   String? deviceName;
+  String? deviceId;
   String? macAddress;
   String? ipAddress;
   initAndroid() async {
     androidInfo = await deviceInfo.androidInfo;
     packageInfo = await PackageInfo.fromPlatform();
     deviceName = await plugin.getName();
+    String? androidId = await MobileDeviceIdentifier().getDeviceId();
+    if (androidId != null) {
+      deviceId = base64Encode(utf8.encode(androidId));
+      macAddress = androidId;
+    }
 
-    final macAddressPlusPlugin = MacAddressPlus();
-    macAddress = await macAddressPlusPlugin.getMacAddress();
-    // macAddress = await GetMac.macAddress;
     ipAddress = await getIPAddress();
   }
-
-  // Future<String> getIPAddress() async {
-  //   try {
-  //     for (var interface in await NetworkInterface.list()) {
-  //       for (var addr in interface.addresses) {
-  //         if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
-
-  //           return addr.address;
-  //         }
-  //       }
-  //     }
-  //   } catch (e) {
-  //     print("Error getting IP Address: $e");
-  //   }
-  //   return 'No IP Found';
-  // }
 
   Future<String> getIPAddress() async {
     try {
@@ -82,7 +72,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void startServer() async {
     print(deviceName);
-    print(androidInfo!.device); 
+    print(deviceId);
+    print(androidInfo!.id);
+    print(androidInfo!.device);
     try {
       _server = await HttpServer.bind(InternetAddress.anyIPv4, 40600);
       setState(() => _serverStarted = true);
@@ -91,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
         print(
             'Request received from: ${request.connectionInfo?.remoteAddress}');
         final resonse =
-            ' "{  \\"version\\": null,  \\"entity\\": {    \\"creationDateTime\\": \\"${DateTime.now().toUtc().toIso8601String()}\\",   \\"version\\": \\"${packageInfo?.version ?? '5.0.0'}\\",    \\"macAddress\\": \\"$macAddress\\",   \\"ipAddress\\": \\"$ipAddress\\", \\"machineName\\": \\"$deviceName\\",  \\"userDomainName\\": \\"NA\\",    \\"userName\\": \\"$deviceName\\",    \\"processorName\\": \\"${androidInfo!.hardware}\\",    \\"systemName\\": \\"Android  v. ${androidInfo!.version.release}\\",    \\"accountDomainSid\\": \\"${androidInfo!.id}\\",    \\"deviceId\\": \\"${androidInfo!.id}\\",    \\"uuid\\": \\"${androidInfo!.id}\\",    \\"diskDriveSerial\\": \\"${androidInfo!.id}\\",    \\"biosSerial\\": \\"${androidInfo!.id}\\",    \\"motherBoardSerialNumber\\": \\"${androidInfo!.id}\\",    \\"processorId\\": \\"${androidInfo!.id}\\",    \\"silentPrintIsEnabled\\": false  },  \\"returnStatus\\": true,  \\"returnMessage\\": null}"';
+            ' "{  \\"version\\": null,  \\"entity\\": {    \\"creationDateTime\\": \\"${DateTime.now().toUtc().toIso8601String()}\\",   \\"version\\": \\"${packageInfo?.version ?? '1.0.0'}\\",    \\"macAddress\\": \\"$macAddress\\",   \\"ipAddress\\": \\"$ipAddress\\", \\"machineName\\": \\"$deviceName\\",  \\"userDomainName\\": \\"NA\\",    \\"userName\\": \\"$deviceName\\",    \\"processorName\\": \\"${androidInfo!.hardware}\\",    \\"systemName\\": \\"Android  v. ${androidInfo!.version.release}\\",    \\"accountDomainSid\\": \\"$deviceId\\",    \\"deviceId\\": \\"$deviceId\\",    \\"uuid\\": \\"$deviceId\\",    \\"diskDriveSerial\\": \\"$deviceId\\",    \\"biosSerial\\": \\"$deviceId\\",    \\"motherBoardSerialNumber\\": \\"$deviceId\\",    \\"processorId\\": \\"$deviceId\\",    \\"silentPrintIsEnabled\\": false  },  \\"returnStatus\\": true,  \\"returnMessage\\": null}"';
         request.response.headers.add('Access-Control-Allow-Origin', '*');
         request.response.headers.add('Access-Control-Allow-Methods', '*');
         request.response.headers.add("Access-Control-Allow-Headers", "*");
@@ -131,27 +123,73 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Flutter Mobile Server')),
-      body: Center(
+      body: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: 20,
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Connect to this address from PC: $_ipAddress'),
-            if (_serverStarted) const Text('Server is running...'),
-            if (!_serverStarted) const Text('Starting server...'),
-            const SizedBox(height: 50),
-            Text(macAddress ?? 'unknown'),
-            ElevatedButton(
-              onPressed: () async {
-                setState(() {
-                  if (_serverStarted) {
-                    _serverStarted = false;
-                    _server?.close();
-                  } else {
-                    _getIPAddressAndStartServer();
+            Text('Connect to this address from PC:'),
+            SizedBox(
+              height: 15,
+            ),
+            if (_serverStarted)
+              InkWell(
+                onTap: () async {
+                  final url = 'http://$_ipAddress';
+                  if (!await launchUrl(
+                    Uri.parse(url),
+                    mode: LaunchMode.externalApplication,
+                  )) {
+                    throw Exception('Could not launch $url');
                   }
-                });
-              },
-              child: Text(_serverStarted ? 'Disconnect' : 'Connect'),
+                },
+                child: Text(
+                  _ipAddress,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      decoration: TextDecoration.underline),
+                ),
+              ),
+            if (_serverStarted)
+              SizedBox(
+                height: 15,
+              ),
+            if (_serverStarted)
+              const Text(
+                'Server is running now ... \n Click on url to open in browser',
+                textAlign: TextAlign.center,
+                style:
+                    TextStyle(color: Colors.green, fontWeight: FontWeight.w600),
+              ),
+            if (!_serverStarted) const Text('Press connect to start server!!'),
+            SizedBox(
+              height: 100,
+            ),
+            Center(
+              child: MaterialButton(
+                minWidth: 250,
+                color: _serverStarted ? Colors.red : Colors.green,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                onPressed: () async {
+                  setState(() {
+                    if (_serverStarted) {
+                      _serverStarted = false;
+                      _server?.close();
+                    } else {
+                      _getIPAddressAndStartServer();
+                    }
+                  });
+                },
+                child: Text(
+                  _serverStarted ? 'Disconnect' : 'Connect',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
             ),
             const SizedBox(height: 20),
           ],
