@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_background/flutter_background.dart';
 import 'package:flutter_device_name/flutter_device_name.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -22,6 +23,8 @@ class _HomeScreenState extends State<HomeScreen> {
   HttpServer? _server;
   DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
   DeviceName plugin = DeviceName();
+
+  bool isBackground = false;
 
   AndroidDeviceInfo? androidInfo;
   PackageInfo? packageInfo;
@@ -75,6 +78,11 @@ class _HomeScreenState extends State<HomeScreen> {
     print(deviceId);
     print(androidInfo!.id);
     print(androidInfo!.device);
+
+    if (await FlutterBackground.hasPermissions) {
+      isBackground = await FlutterBackground.enableBackgroundExecution();
+    }
+    print('isBackground:::: $isBackground');
     try {
       _server = await HttpServer.bind(InternetAddress.anyIPv4, 40600);
       setState(() => _serverStarted = true);
@@ -92,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
         await request.response.close();
       }
     } catch (e) {
+      setState(() => _serverStarted = false);
       print("Error starting server: $e");
     }
   }
@@ -176,14 +185,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
                 onPressed: () async {
-                  setState(() {
-                    if (_serverStarted) {
+                  if (_serverStarted) {
+                    setState(() {
                       _serverStarted = false;
                       _server?.close();
-                    } else {
-                      _getIPAddressAndStartServer();
-                    }
-                  });
+                    });
+
+                    await FlutterBackground.disableBackgroundExecution();
+                    isBackground = FlutterBackground.isBackgroundExecutionEnabled;
+                    print('isBackground:::: $isBackground');
+                  } else {
+                    _getIPAddressAndStartServer();
+                  }
                 },
                 child: Text(
                   _serverStarted ? 'Disconnect' : 'Connect',
