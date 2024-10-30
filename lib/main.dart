@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_background/flutter_background.dart';
+import 'package:quick_settings/quick_settings.dart';
 import 'package:test_connection/home_screen.dart';
+import 'package:test_connection/quick_access.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   const androidConfig = FlutterBackgroundAndroidConfig(
-    notificationTitle: "flutter_background example app",
+    notificationTitle: "App Assist",
     notificationText:
-        "Background notification for keeping the example app running in the background",
-    notificationImportance: AndroidNotificationImportance.normal,
+        "Background notification for keeping app assist running in the background",
+    notificationImportance: AndroidNotificationImportance.high,
   );
   await FlutterBackground.initialize(androidConfig: androidConfig);
+
+  //////
+  QuickSettings.setup(
+    onTileClicked: onTileClicked,
+    onTileAdded: onTileAdded,
+    onTileRemoved: onTileRemoved,
+  );
   runApp(const MyApp());
 }
 

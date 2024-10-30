@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:mobile_device_identifier/mobile_device_identifier.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:quick_settings/quick_settings.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -119,12 +120,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     initAndroid();
+    // QuickSettings.addTileToQuickSettings(
+    //   label: "App assist server",
+    //   drawableName: "alarm",
+    // );
     super.initState();
   }
 
   @override
   void dispose() {
-    _server?.close();
+    // _server?.close();
     super.dispose();
   }
 
@@ -192,7 +197,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     });
 
                     await FlutterBackground.disableBackgroundExecution();
-                    isBackground = FlutterBackground.isBackgroundExecutionEnabled;
+                    isBackground =
+                        FlutterBackground.isBackgroundExecutionEnabled;
                     print('isBackground:::: $isBackground');
                   } else {
                     _getIPAddressAndStartServer();
